@@ -1,0 +1,21 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  Environment:
+    Type: String
+
+Resources:
+  LambdaLayerUtils:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      CompatibleRuntimes:
+        - {{ cookiecutter.runtime }}
+      CompatibleArchitectures:
+        - {{ cookiecutter.architecture }}
+      Content: ../src/layers/utils
+      Description: Utilities for {{ cookiecutter.project }}
+      LayerName: !Sub ${Environment}-{{ cookiecutter.project }}-utils
+
+Outputs:
+  LayerUtilsArn:
+    Value: !Ref LambdaLayerUtils

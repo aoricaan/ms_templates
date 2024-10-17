@@ -1,0 +1,11 @@
+{
+  "project": "my_project",
+  "service": "my_service",
+  "serviceCap": "{{ cookiecutter.service.replace('_', ' ').replace('-', ' ').title().replace(' ', '') }}",
+  "serviceLow": "{{ cookiecutter.service.replace('_', '').replace('-', '').lower() }}",
+  "runtime": "python3.11",
+  "architecture": "arm64",
+  "tracing": "Active",
+  "timeout": "30",
+  "memorySize": "128"
+}

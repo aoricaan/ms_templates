@@ -1,0 +1,47 @@
+Description: Customer Data Backend - API Resources
+
+Transform: AWS::LanguageExtensions
+
+Parameters:
+  Environment:
+    Type: String
+
+  RestApiId:
+    Type: String
+
+Resources:
+  Deployment:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref RestApiId
+
+  Stage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      RestApiId: !Ref RestApiId
+      StageName: !Ref Environment
+      DeploymentId: !Ref Deployment
+
+  ApiUsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    Properties:
+      ApiStages:
+        - ApiId: !Ref RestApiId
+          Stage: !Ref Stage
+      UsagePlanName: !Sub ${Environment} {{ cookiecutter.project }} API - Usage Plan
+
+  ApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      Enabled: true
+      Name: !Sub ${Environment} {{ cookiecutter.project }} API - API Key
+      StageKeys:
+        - RestApiId: !Ref RestApiId
+          StageName: !Ref Stage
+
+  ApiUsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId: !Ref ApiKey
+      KeyType: API_KEY
+      UsagePlanId: !Ref ApiUsagePlan

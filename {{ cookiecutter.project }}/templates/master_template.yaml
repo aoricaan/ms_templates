@@ -1,0 +1,42 @@
+Transform:
+  - AWS::Serverless-2016-10-31
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+
+Resources:
+  ApiStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./api.yaml
+      Parameters:
+        Environment: !Ref Environment
+
+  LayersStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ./layers.yaml
+      Parameters:
+        Environment: !Ref Environment
+
+  {{ cookiecutter.serviceCap }}Stack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: ../src/{{ cookiecutter.service }}/template.yaml
+      Parameters:
+        Environment: !Ref Environment
+        RestApiId: !GetAtt ApiStack.Outputs.RestApiId
+        RootResourceId: !GetAtt ApiStack.Outputs.RootResourceId
+        ApiRoleArn: !GetAtt ApiStack.Outputs.ApiRoleArn
+        LayerUtilsArn: !GetAtt LayersStack.Outputs.LayerUtilsArn
+
+  ApiDeployStack:
+    Type: AWS::Serverless::Application
+    DependsOn: [ {{ cookiecutter.serviceCap }}Stack ]
+    Properties:
+      Location: ./apiDeployment.yaml
+      Parameters:
+        Environment: !Ref Environment
+        RestApiId: !GetAtt ApiStack.Outputs.RestApiId

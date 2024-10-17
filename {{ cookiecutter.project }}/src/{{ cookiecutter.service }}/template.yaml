@@ -1,0 +1,239 @@
+Transform:
+  - AWS::Serverless-2016-10-31
+
+Parameters:
+  Environment:
+    Type: String
+
+  RestApiId:
+    Type: String
+
+  RootResourceId:
+    Type: String
+
+  ApiRoleArn:
+    Type: String
+
+  LayerUtilsArn:
+    Type: String
+
+
+Globals:
+  Function:
+    Architectures:
+      - "{{ cookiecutter.architecture }}"
+    Tracing: {{ cookiecutter.tracing }}
+    Runtime: {{ cookiecutter.runtime }}
+    Timeout: {{ cookiecutter.timeout }}
+    MemorySize: {{ cookiecutter.memorySize }}
+    Handler: lambda_function.lambda_handler
+    Layers:
+      - !Ref LayerUtilsArn
+
+Resources:
+  {{ cookiecutter.serviceCap }}LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  Get{{ cookiecutter.serviceCap }}:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./get/
+      Role: !GetAtt {{ cookiecutter.serviceCap }}LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+
+  Post{{ cookiecutter.serviceCap }}:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./post/
+      Role: !GetAtt {{ cookiecutter.serviceCap }}LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+
+  Put{{ cookiecutter.serviceCap }}:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./put/
+      Role: !GetAtt {{ cookiecutter.serviceCap }}LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+
+  Delete{{ cookiecutter.serviceCap }}:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./delete/
+      Role: !GetAtt {{ cookiecutter.serviceCap }}LambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+
+  {{ cookiecutter.serviceCap }}ApiResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !Ref RootResourceId
+      PathPart: {{ cookiecutter.serviceLow }}
+      RestApiId: !Ref RestApiId
+
+  {{ cookiecutter.serviceCap }}IdApiResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt {{ cookiecutter.serviceCap }}ApiResource.ResourceId
+      PathPart: '{ {{ cookiecutter.serviceLow }}Id }'
+      RestApiId: !Ref RestApiId
+
+  Get{{ cookiecutter.serviceCap }}Method:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: true
+      AuthorizationType: NONE
+      HttpMethod: GET
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+            method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+      ResourceId: !GetAtt {{ cookiecutter.serviceCap }}ApiResource.ResourceId
+      RestApiId: !Ref RestApiId
+      Integration:
+        Type: AWS_PROXY
+        Credentials: !Ref ApiRoleArn
+        Uri: !Join [ '', [ "arn:aws:apigateway:", !Ref AWS::Region, ":lambda:path/2015-03-31/functions/", !GetAtt Get{{ cookiecutter.serviceCap }}.Arn, "/invocations" ] ]
+        IntegrationHttpMethod: POST
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+
+  Post{{ cookiecutter.serviceCap }}Method:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: true
+      AuthorizationType: NONE
+      HttpMethod: POST
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+            method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+      ResourceId: !GetAtt {{ cookiecutter.serviceCap }}ApiResource.ResourceId
+      RestApiId: !Ref RestApiId
+      Integration:
+        Type: AWS_PROXY
+        Credentials: !Ref ApiRoleArn
+        Uri: !Join [ '', [ "arn:aws:apigateway:", !Ref AWS::Region, ":lambda:path/2015-03-31/functions/", !GetAtt Post{{ cookiecutter.serviceCap }}.Arn, "/invocations" ] ]
+        IntegrationHttpMethod: POST
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+
+  Get{{ cookiecutter.serviceCap }}ByIdMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: true
+      AuthorizationType: NONE
+      HttpMethod: GET
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+            method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+      RequestParameters:
+        method.request.path.{{ cookiecutter.serviceLow }}Id: true
+      ResourceId: !GetAtt {{ cookiecutter.serviceCap }}IdApiResource.ResourceId
+      RestApiId: !Ref RestApiId
+      Integration:
+        Type: AWS_PROXY
+        Credentials: !Ref ApiRoleArn
+        Uri: !Join [ '', [ "arn:aws:apigateway:", !Ref AWS::Region, ":lambda:path/2015-03-31/functions/", !GetAtt Get{{ cookiecutter.serviceCap }}.Arn, "/invocations" ] ]
+        IntegrationHttpMethod: POST
+        RequestParameters:
+          integration.request.path.{{ cookiecutter.serviceLow }}Id: "method.request.path.{{ cookiecutter.serviceLow }}Id"
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+
+  Put{{ cookiecutter.serviceCap }}Method:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: true
+      AuthorizationType: NONE
+      HttpMethod: PUT
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+            method.response.header.Access-Control-Allow-Methods: "'PUT,OPTIONS'"
+      RequestParameters:
+        method.request.path.{{ cookiecutter.serviceLow }}Id: true
+      ResourceId: !GetAtt {{ cookiecutter.serviceCap }}IdApiResource.ResourceId
+      RestApiId: !Ref RestApiId
+      Integration:
+        Type: AWS_PROXY
+        Credentials: !Ref ApiRoleArn
+        Uri: !Join [ '', [ "arn:aws:apigateway:", !Ref AWS::Region, ":lambda:path/2015-03-31/functions/", !GetAtt Put{{ cookiecutter.serviceCap }}.Arn, "/invocations" ] ]
+        IntegrationHttpMethod: POST
+        RequestParameters:
+          integration.request.path.{{ cookiecutter.serviceLow }}Id: "method.request.path.{{ cookiecutter.serviceLow }}Id"
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'PUT,OPTIONS'"
+
+  Delete{{ cookiecutter.serviceCap }}Method:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      ApiKeyRequired: true
+      AuthorizationType: NONE
+      HttpMethod: DELETE
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+            method.response.header.Access-Control-Allow-Methods: "'DELETE,OPTIONS'"
+      RequestParameters:
+        method.request.path.{{ cookiecutter.serviceLow }}Id: true
+      ResourceId: !GetAtt {{ cookiecutter.serviceCap }}IdApiResource.ResourceId
+      RestApiId: !Ref RestApiId
+      Integration:
+        Type: AWS_PROXY
+        Credentials: !Ref ApiRoleArn
+        Uri: !Join [ '', [ "arn:aws:apigateway:", !Ref AWS::Region, ":lambda:path/2015-03-31/functions/", !GetAtt Delete{{ cookiecutter.serviceCap }}.Arn, "/invocations" ] ]
+        IntegrationHttpMethod: POST
+        RequestParameters:
+          integration.request.path.{{ cookiecutter.serviceLow }}Id: "method.request.path.{{ cookiecutter.serviceLow }}Id"
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'DELETE,OPTIONS'"
+
+
